@@ -466,7 +466,7 @@
                     <input type="date" id="sfDate" required />
                   </div>
                 </div>
-                <p class="meta" style="margin:0 0 12px;">Username = student's first name (small letters) + start date only — e.g. <b>rahul19</b>. Password for every student: <b>12345678</b></p>
+                <p class="meta" style="margin:0 0 12px;">Just type the student's name — the start date is already set to today (change it only if needed). Username = first name + date (e.g. <b>rahul19</b>). Password for every student: <b>12345678</b></p>
                 <button class="btn" type="submit" id="sfBtn">Create student ID</button>
               </form>
               <div class="card hidden" id="sfResult" style="margin-top:16px; background:var(--green-soft); border-color:var(--green);">
@@ -908,7 +908,7 @@
         $("adminResultsPane").classList.toggle("hidden", which !== "results");
         $("adminStudentsPane").classList.toggle("hidden", which !== "students");
         if (which === "results") loadAllResults();
-        if (which === "students") loadStudents();
+        if (which === "students") { loadStudents(); setTimeout(function () { $("sfName").focus(); }, 60); }
       }
       $("atabTests").addEventListener("click", function () { setAdminTab("tests"); });
       $("atabResults").addEventListener("click", function () { setAdminTab("results"); });
@@ -1146,7 +1146,8 @@
         e.preventDefault();
         var name = $("sfName").value.trim();
         var dval = $("sfDate").value;
-        if (!name || !dval) { toast("Please enter the student's name and start date.", true); return; }
+        if (!dval) { var nd = new Date(); var pp = function (n) { return String(n).padStart(2, "0"); }; dval = nd.getFullYear() + "-" + pp(nd.getMonth() + 1) + "-" + pp(nd.getDate()); }
+        if (!name) { toast("Please enter the student's name.", true); return; }
         var firstName = slugName(name.trim().split(/\s+/)[0]);
         var base = firstName + dateStamp(new Date(dval + "T00:00:00"));
         $("sfBtn").disabled = true;
@@ -1163,6 +1164,7 @@
         $("sfResult").classList.remove("hidden");
         toast("Student ID created: " + uname);
         $("sfName").value = "";
+        $("sfName").focus();
         await loadStudents();
       });
 
