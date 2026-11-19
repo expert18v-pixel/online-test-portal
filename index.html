@@ -1,0 +1,1174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="TestPortal — online MCQ tests with instant, accurate scoring. Take tests from your phone, see your results, track your progress." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='2' y='2' width='60' height='60' rx='14' fill='%234f46e5'/%3E%3Cpath d='M20 22h24M32 22v22' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E" />
+    <title>TestPortal — Online MCQ Tests</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+      :root {
+        --bg: #f4f6fb;
+        --card: #ffffff;
+        --ink: #131a2a;
+        --muted: #5d6b82;
+        --muted-2: #8b98ad;
+        --line: #e3e9f2;
+        --brand: #4f46e5;
+        --brand-2: #4338ca;
+        --brand-soft: #eef2ff;
+        --green: #15803d;
+        --green-soft: #dcfce7;
+        --red: #b91c1c;
+        --red-soft: #fee2e2;
+        --amber: #b45309;
+        --amber-soft: #fef3c7;
+        --radius: 16px;
+        --font-display: "Sora", "Manrope", sans-serif;
+        --font-body: "Manrope", system-ui, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0; background: var(--bg); color: var(--ink);
+        font-family: var(--font-body); font-size: 16px; line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      button, input, select, textarea { font-family: inherit; font-size: 16px; }
+      a { color: var(--brand); }
+
+      header {
+        position: sticky; top: 0; z-index: 40;
+        background: rgba(255,255,255,0.92); backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--line);
+      }
+      .nav { max-width: 1080px; margin: 0 auto; padding: 0 18px; height: 62px; display: flex; align-items: center; gap: 12px; }
+      .brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 800; font-size: 20px; letter-spacing: -0.01em; }
+      .brand .mark { width: 34px; height: 34px; border-radius: 10px; background: var(--brand); color: #fff; display: grid; place-items: center; font-size: 19px; font-weight: 800; }
+      .brand em { font-style: normal; color: var(--brand); }
+      .nav .spacer { flex: 1; }
+      .user-chip { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 14px; color: var(--muted); }
+      .role-badge { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--brand-soft); color: var(--brand-2); }
+      .role-badge.admin { background: var(--amber-soft); color: var(--amber); }
+
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 26px 18px 70px; }
+      .view { display: none; }
+      .view.on { display: block; }
+
+      h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.01em; margin: 0; }
+      .page-title { font-size: 27px; font-weight: 800; margin-bottom: 6px; }
+      .page-sub { color: var(--muted); margin: 0 0 22px; }
+
+      .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+      .btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        font-weight: 800; font-size: 15px; cursor: pointer; border: 0; border-radius: 12px;
+        padding: 12px 20px; min-height: 48px; background: var(--brand); color: #fff;
+        transition: background 0.15s ease, transform 0.1s ease; text-decoration: none;
+      }
+      .btn:hover { background: var(--brand-2); }
+      .btn:active { transform: translateY(1px); }
+      .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+      .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+      .btn.ghost:hover { border-color: var(--brand); color: var(--brand-2); background: var(--brand-soft); }
+      .btn.danger { background: var(--red); }
+      .btn.small { padding: 8px 14px; min-height: 40px; font-size: 14px; border-radius: 10px; }
+      .btn.block { width: 100%; }
+
+      label { display: block; font-weight: 700; font-size: 14px; margin: 0 0 7px; }
+      input[type="text"], input[type="email"], input[type="password"], input[type="number"], select, textarea {
+        width: 100%; padding: 12px 13px; border: 1px solid var(--line); border-radius: 11px;
+        background: #fff; color: var(--ink); min-height: 48px;
+      }
+      textarea { min-height: 84px; resize: vertical; }
+      input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); outline-offset: 1px; border-color: var(--brand); }
+      .field { margin-bottom: 15px; }
+      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      @media (max-width: 620px) { .grid-2 { grid-template-columns: 1fr; } }
+
+      /* Auth */
+      .auth-shell { max-width: 430px; margin: 34px auto 0; }
+      .auth-tabs { display: grid; grid-template-columns: 1fr 1fr; background: #e8edf5; border-radius: 12px; padding: 4px; margin-bottom: 20px; }
+      .auth-tabs button { border: 0; background: transparent; padding: 10px; border-radius: 9px; font-weight: 800; cursor: pointer; color: var(--muted); }
+      .auth-tabs button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(16,24,40,0.12); }
+      .auth-note { text-align: center; color: var(--muted); font-size: 14px; margin-top: 16px; }
+
+      /* Test cards */
+      .filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+      .filters select { width: auto; min-height: 44px; padding: 9px 12px; font-size: 15px; }
+      .test-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+      .test-card { display: flex; flex-direction: column; gap: 10px; }
+      .test-card h3 { font-size: 19px; font-weight: 700; }
+      .test-card p { color: var(--muted); margin: 0; font-size: 14.5px; }
+      .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+      .chip { font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--brand-soft); color: var(--brand-2); }
+      .chip.grey { background: #eef1f6; color: var(--muted); }
+      .test-card .foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+      .meta { font-size: 13.5px; color: var(--muted-2); font-weight: 600; }
+      .empty { text-align: center; color: var(--muted); padding: 38px 16px; border: 1.5px dashed var(--line); border-radius: var(--radius); background: #fff; }
+
+      /* Results table */
+      .table-wrap { overflow-x: auto; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); }
+      table { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 560px; }
+      th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+      th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted-2); background: #f8fafc; }
+      tr:last-child td { border-bottom: 0; }
+      tbody tr { cursor: default; }
+      tbody tr.clickable { cursor: pointer; }
+      tbody tr.clickable:hover { background: var(--brand-soft); }
+      .score-pill { font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--green-soft); color: var(--green); }
+      .score-pill.low { background: var(--red-soft); color: var(--red); }
+      .score-pill.mid { background: var(--amber-soft); color: var(--amber); }
+
+      /* Player */
+      .player-top { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+      .timer { font-family: var(--font-display); font-weight: 800; font-size: 19px; padding: 8px 14px; border-radius: 11px; background: var(--ink); color: #fff; }
+      .timer.low { background: var(--red); }
+      .progress-line { height: 8px; background: #e8edf5; border-radius: 99px; overflow: hidden; margin-bottom: 18px; }
+      .progress-line i { display: block; height: 100%; background: var(--brand); border-radius: 99px; transition: width 0.25s ease; }
+      .q-text { font-size: 19px; font-weight: 700; margin: 4px 0 18px; line-height: 1.5; }
+      .opt {
+        display: flex; gap: 12px; align-items: flex-start; width: 100%; text-align: left;
+        background: #fff; border: 1.5px solid var(--line); border-radius: 13px;
+        padding: 14px 15px; margin-bottom: 11px; cursor: pointer; font-size: 16px; font-weight: 600;
+      }
+      .opt:hover { border-color: var(--brand); }
+      .opt.sel { border-color: var(--brand); background: var(--brand-soft); }
+      .opt .letter { flex: none; width: 28px; height: 28px; border-radius: 8px; background: #eef1f6; display: grid; place-items: center; font-weight: 800; font-size: 14px; }
+      .opt.sel .letter { background: var(--brand); color: #fff; }
+      #view-player { -webkit-user-select: none; user-select: none; }
+      .player-nav { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+      .palette { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+      .palette button {
+        width: 40px; height: 40px; border-radius: 10px; border: 1.5px solid var(--line);
+        background: #fff; font-weight: 800; cursor: pointer; font-size: 14px;
+      }
+      .palette button.done { background: var(--brand); border-color: var(--brand); color: #fff; }
+      .palette button.now { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+      /* Result */
+      .result-hero { text-align: center; padding: 30px 22px; }
+      .result-score { font-family: var(--font-display); font-size: 52px; font-weight: 800; line-height: 1; }
+      .result-score small { font-size: 22px; color: var(--muted-2); }
+      .result-stats { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+      .rstat { padding: 10px 16px; border-radius: 12px; font-weight: 800; font-size: 15px; }
+      .rstat.g { background: var(--green-soft); color: var(--green); }
+      .rstat.r { background: var(--red-soft); color: var(--red); }
+      .rstat.a { background: var(--amber-soft); color: var(--amber); }
+      .review-item { margin-bottom: 14px; }
+      .review-item .q-text { font-size: 16.5px; margin-bottom: 12px; }
+      .ropt { display: flex; gap: 11px; padding: 10px 13px; border-radius: 10px; border: 1.5px solid var(--line); margin-bottom: 8px; font-weight: 600; align-items: flex-start; }
+      .ropt .letter { flex: none; width: 26px; height: 26px; border-radius: 7px; background: #eef1f6; display: grid; place-items: center; font-weight: 800; font-size: 13px; }
+      .ropt.correct { border-color: var(--green); background: #f0fdf4; }
+      .ropt.correct .letter { background: var(--green); color: #fff; }
+      .ropt.wrong { border-color: var(--red); background: #fef2f2; }
+      .ropt.wrong .letter { background: var(--red); color: #fff; }
+      .ropt .tag { margin-left: auto; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; flex: none; }
+
+      /* Admin */
+      .admin-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+      .admin-tabs button { border: 1px solid var(--line); background: #fff; padding: 10px 18px; border-radius: 999px; font-weight: 800; cursor: pointer; }
+      .admin-tabs button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+      .admin-test-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 15px 18px; border: 1px solid var(--line); border-radius: 13px; background: #fff; margin-bottom: 11px; }
+      .admin-test-row .grow { flex: 1; min-width: 200px; }
+      .admin-test-row h3 { font-size: 16.5px; }
+      .switch { position: relative; width: 48px; height: 27px; flex: none; }
+      .switch input { opacity: 0; width: 0; height: 0; }
+      .switch i { position: absolute; inset: 0; background: #cbd5e1; border-radius: 99px; cursor: pointer; transition: 0.2s; }
+      .switch i::before { content: ""; position: absolute; width: 21px; height: 21px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: 0.2s; }
+      .switch input:checked + i { background: var(--green); }
+      .switch input:checked + i::before { transform: translateX(21px); }
+      .q-row { border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; margin-bottom: 10px; background: #fff; }
+      .q-row .qt { font-weight: 700; margin-bottom: 5px; }
+      .q-row .qo { color: var(--muted); font-size: 14px; }
+      .q-row .qo b { color: var(--green); }
+      details.panel { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 20px; margin-bottom: 18px; }
+      details.panel summary { cursor: pointer; font-family: var(--font-display); font-weight: 700; font-size: 17px; padding: 14px 0; }
+      details.panel .inner { padding-bottom: 18px; }
+
+      .toast {
+        position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(80px);
+        background: var(--ink); color: #fff; font-weight: 700; font-size: 14.5px;
+        padding: 12px 18px; border-radius: 12px; z-index: 90; opacity: 0; transition: all 0.3s ease;
+        max-width: min(92vw, 480px); text-align: center; box-shadow: 0 10px 30px rgba(16,24,40,0.3);
+      }
+      .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+      .toast.err { background: var(--red); }
+      .modal-back { position: fixed; inset: 0; background: rgba(10,14,24,0.55); z-index: 80; display: none; align-items: center; justify-content: center; padding: 18px; }
+      .modal-back.on { display: flex; }
+      .modal { background: #fff; border-radius: 18px; padding: 24px; max-width: 430px; width: 100%; }
+      .hidden { display: none !important; }
+      .mt { margin-top: 18px; }
+      .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+      .right { margin-left: auto; }
+      @media (max-width: 560px) {
+        .page-title { font-size: 23px; }
+        .result-score { font-size: 42px; }
+        .card { padding: 18px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="nav">
+        <div class="brand"><span class="mark">T</span>Test<em>Portal</em></div>
+        <div class="spacer"></div>
+        <div class="user-chip hidden" id="userChip">
+          <span id="userName"></span>
+          <span class="role-badge" id="roleBadge">Student</span>
+          <button class="btn ghost small" id="logoutBtn" type="button">Log out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+
+      <!-- ============ AUTH ============ -->
+      <section class="view" id="view-auth">
+        <div class="auth-shell">
+          <h1 class="page-title" style="text-align:center;">Online MCQ Tests</h1>
+          <p class="page-sub" style="text-align:center;">Class 12 — Physics, Chemistry, Maths, English &amp; Hindi Compulsory. Take tests from your phone and get your score the moment you finish.</p>
+          <div class="card">
+            <div class="auth-tabs">
+              <button type="button" id="tabLogin" class="on">Log in</button>
+              <button type="button" id="tabRegister">Register</button>
+            </div>
+            <form id="loginForm">
+              <div class="field">
+                <label for="liEmail">Email</label>
+                <input type="email" id="liEmail" autocomplete="email" placeholder="you@example.com" required />
+              </div>
+              <div class="field">
+                <label for="liPass">Password</label>
+                <input type="password" id="liPass" autocomplete="current-password" placeholder="Your password" required />
+              </div>
+              <button class="btn block" type="submit" id="loginBtn">Log in</button>
+            </form>
+            <form id="registerForm" class="hidden">
+              <div class="field">
+                <label for="rgName">Full name</label>
+                <input type="text" id="rgName" autocomplete="name" placeholder="e.g. Rahul Sharma" required />
+              </div>
+              <div class="field">
+                <label for="rgEmail">Email</label>
+                <input type="email" id="rgEmail" autocomplete="email" placeholder="you@example.com" required />
+              </div>
+              <div class="field">
+                <label for="rgPass">Password</label>
+                <input type="password" id="rgPass" autocomplete="new-password" placeholder="At least 6 characters" minlength="6" required />
+              </div>
+              <button class="btn block" type="submit" id="registerBtn">Create account</button>
+            </form>
+          </div>
+          <p class="auth-note">New here? Tap <b>Register</b> to create your free student account.</p>
+        </div>
+      </section>
+
+      <!-- ============ STUDENT HOME ============ -->
+      <section class="view" id="view-home">
+        <h1 class="page-title">Available Tests</h1>
+        <p class="page-sub">Class 12 — Physics, Chemistry, Maths, English, Hindi Compulsory. Pick a test and start. Your score appears as soon as you submit — and stays saved in your account.</p>
+        <div class="filters">
+          <select id="filterClass" class="hidden" aria-label="Filter by class"><option value="">All classes</option></select>
+          <select id="filterSubject" aria-label="Filter by subject"><option value="">All subjects</option></select>
+        </div>
+        <div class="test-grid" id="testGrid"></div>
+        <div class="empty hidden" id="noTests">No tests available right now. Please check back later.</div>
+
+        <h2 class="page-title mt" style="font-size:22px; margin-top:38px;">My Results</h2>
+        <p class="page-sub">Every test you have taken, with scores.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Test</th><th>Score</th><th>Result</th><th>Date</th><th></th></tr></thead>
+            <tbody id="myResultsBody"></tbody>
+          </table>
+        </div>
+        <div class="empty hidden" id="noResults" style="margin-top:12px;">You have not taken any test yet.</div>
+      </section>
+
+      <!-- ============ TEST PLAYER ============ -->
+      <section class="view" id="view-player">
+        <div class="player-top">
+          <h1 class="page-title" id="playerTitle" style="font-size:22px; margin:0;">Test</h1>
+          <div class="right row">
+            <span class="meta" id="playerProgress"></span>
+            <span class="chip hidden" id="warnChip" style="background:var(--red-soft); color:var(--red);">⚠ Warnings: 0/3</span>
+            <span class="timer" id="playerTimer">00:00</span>
+          </div>
+        </div>
+        <div class="progress-line"><i id="playerBar" style="width:0%"></i></div>
+        <div class="card">
+          <p class="meta" id="qCounter"></p>
+          <p class="q-text" id="qText"></p>
+          <div id="qOptions"></div>
+          <div class="player-nav">
+            <button class="btn ghost" id="prevBtn" type="button">← Previous</button>
+            <button class="btn ghost" id="clearBtn" type="button">Clear answer</button>
+            <button class="btn" id="nextBtn" type="button">Next →</button>
+            <button class="btn danger right" id="submitBtn" type="button">Submit test</button>
+          </div>
+          <div class="palette" id="palette"></div>
+        </div>
+        <p class="auth-note">Stay on this screen during the test — switching apps or tabs gives a warning, and after 3 warnings the test submits itself. When the timer ends, the test also submits automatically.</p>
+      </section>
+
+      <!-- ============ RESULT ============ -->
+      <section class="view" id="view-result">
+        <div class="card result-hero">
+          <p class="meta" id="resultTestName"></p>
+          <div class="result-score"><span id="resultScore">0</span><small> / <span id="resultTotal">0</span></small></div>
+          <p class="page-sub" id="resultLine" style="margin:8px 0 0;"></p>
+          <div class="result-stats">
+            <span class="rstat g" id="resultCorrect"></span>
+            <span class="rstat r" id="resultWrong"></span>
+            <span class="rstat a" id="resultSkipped"></span>
+          </div>
+          <div class="row mt" style="justify-content:center;">
+            <button class="btn" id="backHomeBtn" type="button">Back to tests</button>
+          </div>
+        </div>
+        <h2 class="page-title" style="font-size:21px; margin-top:30px;">Answer Review</h2>
+        <p class="page-sub">Green = correct answer. Red = your wrong pick.</p>
+        <div id="reviewList"></div>
+      </section>
+
+      <!-- ============ ADMIN ============ -->
+      <section class="view" id="view-admin">
+        <h1 class="page-title">Admin Panel</h1>
+        <p class="page-sub">Create tests, add MCQ questions, and see every student's results.</p>
+        <div class="admin-tabs">
+          <button type="button" id="atabTests" class="on">Tests &amp; Questions</button>
+          <button type="button" id="atabResults">All Results</button>
+        </div>
+
+        <div id="adminTestsPane">
+          <details class="panel" id="newTestPanel">
+            <summary>+ Create a new test</summary>
+            <div class="inner">
+              <form id="testForm">
+                <input type="hidden" id="tfId" />
+                <div class="field">
+                  <label for="tfTitle">Test title *</label>
+                  <input type="text" id="tfTitle" placeholder="e.g. Maths — Chapter 1: Real Numbers" required />
+                </div>
+                <div class="grid-2">
+                  <div class="field">
+                    <label for="tfClass">Class</label>
+                    <input type="text" id="tfClass" value="Class 12" readonly />
+                  </div>
+                  <div class="field">
+                    <label for="tfSubject">Subject</label>
+                    <select id="tfSubject">
+                      <option value="Physics">Physics</option>
+                      <option value="Chemistry">Chemistry</option>
+                      <option value="Maths">Maths</option>
+                      <option value="English">English</option>
+                      <option value="Hindi Compulsory">Hindi Compulsory</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="tfDesc">Description (optional)</label>
+                  <textarea id="tfDesc" placeholder="What this test covers…"></textarea>
+                </div>
+                <div class="grid-2">
+                  <div class="field">
+                    <label for="tfDuration">Time limit (minutes) *</label>
+                    <input type="number" id="tfDuration" min="1" max="600" value="10" required />
+                  </div>
+                  <div class="field">
+                    <label for="tfMarks">Marks per correct answer *</label>
+                    <input type="number" id="tfMarks" min="0" step="0.25" value="1" required />
+                  </div>
+                </div>
+                <div class="grid-2">
+                  <div class="field">
+                    <label for="tfNegative">Negative marks per wrong answer</label>
+                    <input type="number" id="tfNegative" min="0" step="0.25" value="0" />
+                  </div>
+                  <div class="field">
+                    <label for="tfPublished">Visible to students?</label>
+                    <select id="tfPublished">
+                      <option value="false">Hidden (draft)</option>
+                      <option value="true">Published (live)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="row">
+                  <button class="btn" type="submit" id="tfSaveBtn">Save test</button>
+                  <button class="btn ghost hidden" type="button" id="tfCancelBtn">Cancel edit</button>
+                </div>
+              </form>
+            </div>
+          </details>
+
+          <div id="adminTestList"></div>
+
+          <div id="questionManager" class="hidden">
+            <h2 class="page-title" style="font-size:21px; margin-top:26px;">Questions — <span id="qmTestTitle"></span></h2>
+            <p class="page-sub">MCQ only: every question has 4 options and exactly one correct answer.</p>
+            <div id="qmList"></div>
+            <details class="panel" id="newQuestionPanel">
+              <summary>+ Add a question</summary>
+              <div class="inner">
+                <form id="questionForm">
+                  <input type="hidden" id="qfId" />
+                  <div class="field">
+                    <label for="qfText">Question *</label>
+                    <textarea id="qfText" placeholder="Type the question…" required></textarea>
+                  </div>
+                  <div class="grid-2">
+                    <div class="field"><label for="qfA">Option A *</label><input type="text" id="qfA" required /></div>
+                    <div class="field"><label for="qfB">Option B *</label><input type="text" id="qfB" required /></div>
+                  </div>
+                  <div class="grid-2">
+                    <div class="field"><label for="qfC">Option C *</label><input type="text" id="qfC" required /></div>
+                    <div class="field"><label for="qfD">Option D *</label><input type="text" id="qfD" required /></div>
+                  </div>
+                  <div class="grid-2">
+                    <div class="field">
+                      <label for="qfCorrect">Correct answer *</label>
+                      <select id="qfCorrect">
+                        <option value="A">Option A</option>
+                        <option value="B">Option B</option>
+                        <option value="C">Option C</option>
+                        <option value="D">Option D</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="qfOrder">Order in test</label>
+                      <input type="number" id="qfOrder" min="0" value="0" />
+                    </div>
+                  </div>
+                  <div class="row">
+                    <button class="btn" type="submit">Save question</button>
+                    <button class="btn ghost hidden" type="button" id="qfCancelBtn">Cancel edit</button>
+                  </div>
+                </form>
+              </div>
+            </details>
+            <button class="btn ghost" id="qmCloseBtn" type="button">← Back to all tests</button>
+          </div>
+        </div>
+
+        <div id="adminResultsPane" class="hidden">
+          <div class="filters">
+            <select id="resultFilterTest" aria-label="Filter results by test"><option value="">All tests</option></select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Student</th><th>Test</th><th>Score</th><th>Correct</th><th>Wrong</th><th>Skipped</th><th>Date</th><th></th></tr></thead>
+              <tbody id="allResultsBody"></tbody>
+            </table>
+          </div>
+          <div class="empty hidden" id="noAllResults" style="margin-top:12px;">No results yet. When students take tests, their scores will appear here.</div>
+          <p class="auth-note">Tap any row to see that student's full answer review.</p>
+        </div>
+      </section>
+
+    </main>
+
+    <div class="modal-back" id="confirmModal">
+      <div class="modal">
+        <h3 id="confirmTitle" style="margin-bottom:8px;">Are you sure?</h3>
+        <p id="confirmText" style="color:var(--muted); margin:0 0 18px;"></p>
+        <div class="row" style="justify-content:flex-end;">
+          <button class="btn ghost" id="confirmNo" type="button">Cancel</button>
+          <button class="btn danger" id="confirmYes" type="button">Yes, continue</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <script>
+      "use strict";
+      var SUPABASE_URL = "https://naoenkvtdqxeinwoeple.supabase.co";
+      var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hb2Vua3Z0ZHF4ZWlud29lcGxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwODQxMTIsImV4cCI6MjExMDY2MDExMn0.RMlj6xur2GWJek6awOVcPRSOiVh4ER64Lc0LDoXuDGQ";
+      var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      var $ = function (id) { return document.getElementById(id); };
+      var me = null;            // my profile row
+      var testsCache = [];      // published tests (student) / all tests (admin)
+      var qCounts = {};         // test_id -> question count
+      var myAttempts = {};      // test_id -> my submitted attempt (one attempt per test)
+
+      function esc(s) {
+        return String(s == null ? "" : s)
+          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+      }
+      function toast(msg, isErr) {
+        var t = $("toast");
+        t.textContent = msg;
+        t.className = "toast show" + (isErr ? " err" : "");
+        clearTimeout(t._h);
+        t._h = setTimeout(function () { t.className = "toast"; }, 3400);
+      }
+      var confirmCb = null;
+      function askConfirm(title, text, cb) {
+        $("confirmTitle").textContent = title;
+        $("confirmText").textContent = text;
+        confirmCb = cb;
+        $("confirmModal").classList.add("on");
+      }
+      $("confirmNo").addEventListener("click", function () { $("confirmModal").classList.remove("on"); confirmCb = null; });
+      $("confirmYes").addEventListener("click", function () {
+        $("confirmModal").classList.remove("on");
+        if (confirmCb) { var cb = confirmCb; confirmCb = null; cb(); }
+      });
+
+      function show(viewId) {
+        ["view-auth", "view-home", "view-player", "view-result", "view-admin"].forEach(function (v) {
+          $(v).classList.toggle("on", v === viewId);
+        });
+        window.scrollTo({ top: 0 });
+      }
+      function fmtDate(iso) {
+        if (!iso) return "—";
+        try { return new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }); }
+        catch (e) { return iso; }
+      }
+      function pct(score, total) {
+        if (!total) return 0;
+        return Math.round((Number(score) / Number(total)) * 100);
+      }
+      function scorePill(score, total) {
+        var p = pct(score, total);
+        var cls = p >= 60 ? "" : (p >= 40 ? " mid" : " low");
+        return '<span class="score-pill' + cls + '">' + esc(score) + " / " + esc(total) + " (" + p + '%)</span>';
+      }
+
+      /* ---------------- Auth ---------------- */
+      function setAuthTab(which) {
+        $("tabLogin").classList.toggle("on", which === "login");
+        $("tabRegister").classList.toggle("on", which === "register");
+        $("loginForm").classList.toggle("hidden", which !== "login");
+        $("registerForm").classList.toggle("hidden", which !== "register");
+      }
+      $("tabLogin").addEventListener("click", function () { setAuthTab("login"); });
+      $("tabRegister").addEventListener("click", function () { setAuthTab("register"); });
+
+      $("loginForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        $("loginBtn").disabled = true;
+        var res = await sb.auth.signInWithPassword({ email: $("liEmail").value.trim(), password: $("liPass").value });
+        $("loginBtn").disabled = false;
+        if (res.error) { toast(res.error.message, true); return; }
+        await enterApp();
+      });
+
+      $("registerForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        $("registerBtn").disabled = true;
+        var res = await sb.auth.signUp({
+          email: $("rgEmail").value.trim(),
+          password: $("rgPass").value,
+          options: { data: { name: $("rgName").value.trim() } }
+        });
+        $("registerBtn").disabled = false;
+        if (res.error) { toast(res.error.message, true); return; }
+        if (res.data.session) { toast("Account created. Welcome!"); await enterApp(); }
+        else { toast("Account created — now log in with your email and password."); setAuthTab("login"); }
+      });
+
+      $("logoutBtn").addEventListener("click", async function () {
+        stopTimer();
+        await sb.auth.signOut();
+        me = null;
+        $("userChip").classList.add("hidden");
+        show("view-auth");
+      });
+
+      async function loadProfile(userId) {
+        for (var i = 0; i < 3; i++) {
+          var res = await sb.from("profiles").select("*").eq("id", userId).single();
+          if (!res.error && res.data) return res.data;
+          await new Promise(function (r) { setTimeout(r, 700); });
+        }
+        return null;
+      }
+
+      async function enterApp() {
+        var sess = await sb.auth.getSession();
+        if (!sess.data.session) { show("view-auth"); return; }
+        var profile = await loadProfile(sess.data.session.user.id);
+        if (!profile) { toast("Could not load your profile. Please try again.", true); return; }
+        me = profile;
+        $("userName").textContent = me.name || me.email;
+        var badge = $("roleBadge");
+        badge.textContent = me.role === "admin" ? "Admin" : "Student";
+        badge.classList.toggle("admin", me.role === "admin");
+        $("userChip").classList.remove("hidden");
+        if (me.role === "admin") { show("view-admin"); await loadAdmin(); }
+        else { show("view-home"); await loadHome(); }
+      }
+
+      /* ---------------- Student home ---------------- */
+      async function loadHome() {
+        var res = await sb.from("tests").select("*").eq("is_published", true).order("created_at", { ascending: false });
+        if (res.error) { toast(res.error.message, true); return; }
+        testsCache = res.data || [];
+        await loadCounts(testsCache.map(function (t) { return t.id; }));
+        fillFilters();
+        await loadMyResults();
+        renderTests();
+      }
+
+      async function loadCounts(ids) {
+        qCounts = {};
+        if (!ids.length) return;
+        var res = await sb.from("questions").select("test_id").in("test_id", ids);
+        if (res.error) return;
+        (res.data || []).forEach(function (r) { qCounts[r.test_id] = (qCounts[r.test_id] || 0) + 1; });
+      }
+
+      function fillFilters() {
+        var classes = {}, subjects = {};
+        testsCache.forEach(function (t) {
+          if (t.class_name) classes[t.class_name] = 1;
+          if (t.subject) subjects[t.subject] = 1;
+        });
+        var fc = $("filterClass"), fs = $("filterSubject");
+        var cv = fc.value, sv = fs.value;
+        fc.innerHTML = '<option value="">All classes</option>' + Object.keys(classes).sort().map(function (c) { return '<option>' + esc(c) + "</option>"; }).join("");
+        fs.innerHTML = '<option value="">All subjects</option>' + Object.keys(subjects).sort().map(function (s) { return '<option>' + esc(s) + "</option>"; }).join("");
+        fc.value = cv; fs.value = sv;
+      }
+      $("filterClass").addEventListener("change", renderTests);
+      $("filterSubject").addEventListener("change", renderTests);
+
+      function footHtml(t, n, total) {
+        var done = myAttempts[t.id];
+        if (done) {
+          return '<div class="foot"><span class="meta">✓ Completed · Score <b>' + esc(done.score) + " / " + esc(done.total_marks) + '</b></span>' +
+            '<button class="btn ghost small" data-review2="' + done.id + '">View result</button></div>';
+        }
+        return '<div class="foot"><span class="meta">Total marks: ' + esc(total) + "</span>" +
+          '<button class="btn small" data-start="' + t.id + '"' + (n === 0 ? " disabled" : "") + ">Start test</button></div>";
+      }
+
+      function renderTests() {
+        var fc = $("filterClass").value, fs = $("filterSubject").value;
+        var list = testsCache.filter(function (t) {
+          return (!fc || t.class_name === fc) && (!fs || t.subject === fs);
+        });
+        $("noTests").classList.toggle("hidden", list.length > 0);
+        $("testGrid").innerHTML = list.map(function (t) {
+          var n = qCounts[t.id] || 0;
+          var total = n * Number(t.marks_per_question);
+          var chips = "";
+          if (t.class_name) chips += '<span class="chip">' + esc(t.class_name) + "</span>";
+          if (t.subject) chips += '<span class="chip">' + esc(t.subject) + "</span>";
+          chips += '<span class="chip grey">' + n + " questions</span>";
+          chips += '<span class="chip grey">' + esc(t.duration_minutes) + " min</span>";
+          if (Number(t.negative_marks) > 0) chips += '<span class="chip grey">−' + esc(t.negative_marks) + " negative</span>";
+          return '<article class="card test-card">' +
+            "<h3>" + esc(t.title) + "</h3>" +
+            (t.description ? "<p>" + esc(t.description) + "</p>" : "") +
+            '<div class="chips">' + chips + "</div>" +
+            footHtml(t, n, total) +
+            "</article>";
+        }).join("");
+        $("testGrid").querySelectorAll("[data-start]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var t = testsCache.find(function (x) { return x.id === b.getAttribute("data-start"); });
+            if (t) openPlayer(t);
+          });
+        });
+        $("testGrid").querySelectorAll("[data-review2]").forEach(function (b) {
+          b.addEventListener("click", function () { openReview(b.getAttribute("data-review2")); });
+        });
+      }
+
+      async function loadMyResults() {
+        var res = await sb.from("attempts")
+          .select("*, tests(title)")
+          .eq("student_id", me.id)
+          .not("submitted_at", "is", null)
+          .order("submitted_at", { ascending: false });
+        if (res.error) { toast(res.error.message, true); return; }
+        var rows = res.data || [];
+        myAttempts = {};
+        rows.forEach(function (a) { if (!myAttempts[a.test_id]) myAttempts[a.test_id] = a; });
+        $("noResults").classList.toggle("hidden", rows.length > 0);
+        $("myResultsBody").innerHTML = rows.map(function (a) {
+          var title = a.tests && a.tests.title ? a.tests.title : "Test";
+          var detail = a.correct_count + " right · " + a.wrong_count + " wrong · " + a.unanswered_count + " skipped";
+          return "<tr><td><b>" + esc(title) + "</b><br><span class='meta'>" + esc(detail) + "</span></td>" +
+            "<td>" + scorePill(a.score, a.total_marks) + "</td>" +
+            "<td>" + (pct(a.score, a.total_marks) >= 40 ? "Pass" : "—") + "</td>" +
+            "<td>" + esc(fmtDate(a.submitted_at)) + "</td>" +
+            '<td><button class="btn ghost small" data-review="' + a.id + '">Review</button></td></tr>';
+        }).join("");
+        $("myResultsBody").querySelectorAll("[data-review]").forEach(function (b) {
+          b.addEventListener("click", function () { openReview(b.getAttribute("data-review")); });
+        });
+      }
+
+      /* ---------------- Result & review ---------------- */
+      async function openReview(attemptId) {
+        var att = await sb.from("attempts").select("*, tests(title)").eq("id", attemptId).single();
+        if (att.error) { toast(att.error.message, true); return; }
+        var rev = await sb.rpc("get_attempt_review", { p_attempt_id: attemptId });
+        if (rev.error) { toast(rev.error.message, true); return; }
+        renderResult(att.data, rev.data || []);
+      }
+
+      function renderResult(a, review) {
+        $("resultTestName").textContent = (a.tests && a.tests.title) || "Test result";
+        $("resultScore").textContent = a.score;
+        $("resultTotal").textContent = a.total_marks;
+        $("resultLine").textContent = "You scored " + pct(a.score, a.total_marks) + "% · " + fmtDate(a.submitted_at);
+        $("resultCorrect").textContent = "✓ " + a.correct_count + " correct";
+        $("resultWrong").textContent = "✗ " + a.wrong_count + " wrong";
+        $("resultSkipped").textContent = "– " + a.unanswered_count + " skipped";
+        $("reviewList").innerHTML = review.map(function (r, i) {
+          var letters = ["A", "B", "C", "D"];
+          var keys = ["option_a", "option_b", "option_c", "option_d"];
+          var opts = keys.map(function (k, j) {
+            var L = letters[j];
+            var cls = "ropt", tag = "";
+            if (L === r.correct_option) { cls += " correct"; tag = '<span class="tag" style="color:var(--green)">Correct</span>'; }
+            if (L === r.selected && !r.is_correct) { cls += " wrong"; tag = '<span class="tag" style="color:var(--red)">Your answer</span>'; }
+            if (L === r.selected && r.is_correct) { tag = '<span class="tag" style="color:var(--green)">Your answer ✓</span>'; }
+            return '<div class="' + cls + '"><span class="letter">' + L + "</span><span>" + esc(r[k]) + "</span>" + tag + "</div>";
+          }).join("");
+          var head = "Q" + (i + 1) + ". " + esc(r.question);
+          if (!r.selected) head += ' <span class="chip grey">Not answered</span>';
+          return '<div class="card review-item"><p class="q-text">' + head + "</p>" + opts + "</div>";
+        }).join("");
+        show("view-result");
+      }
+      $("backHomeBtn").addEventListener("click", async function () {
+        if (me && me.role === "admin") { show("view-admin"); }
+        else { show("view-home"); await loadHome(); }
+      });
+
+      /* ---------------- Test player ---------------- */
+      var player = null;
+      var timerId = null;
+
+      function stopTimer() { if (timerId) { clearInterval(timerId); timerId = null; } }
+
+      async function openPlayer(test) {
+        if (myAttempts[test.id]) {
+          toast("You have already taken this test — one attempt per student.");
+          openReview(myAttempts[test.id].id);
+          return;
+        }
+        var res = await sb.from("questions")
+          .select("id, question_text, option_a, option_b, option_c, option_d, sort_order")
+          .eq("test_id", test.id).order("sort_order", { ascending: true });
+        if (res.error) { toast(res.error.message, true); return; }
+        if (!res.data || !res.data.length) { toast("This test has no questions yet.", true); return; }
+        // Anti-cheating: every student gets the questions AND the options in a
+        // different order, so answers cannot be shared by position or letter.
+        var qs = res.data.slice();
+        for (var i = qs.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = qs[i]; qs[i] = qs[j]; qs[j] = tmp; }
+        qs.forEach(function (q) {
+          var letters = ["A", "B", "C", "D"];
+          for (var a = letters.length - 1; a > 0; a--) { var b = Math.floor(Math.random() * (a + 1)); var t2 = letters[a]; letters[a] = letters[b]; letters[b] = t2; }
+          q._order = letters; // display position -> original option letter
+        });
+        player = { test: test, questions: qs, answers: {}, idx: 0, left: test.duration_minutes * 60, submitting: false, strikes: 0, lastStrike: 0, fs: false };
+        $("warnChip").classList.add("hidden");
+        $("warnChip").textContent = "⚠ Warnings: 0/3";
+        try {
+          var fp = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+          if (fp && fp.catch) fp.catch(function () {});
+        } catch (e) {}
+        $("playerTitle").textContent = test.title;
+        show("view-player");
+        renderQuestion();
+        updateTimer();
+        stopTimer();
+        timerId = setInterval(function () {
+          if (!player) { stopTimer(); return; }
+          player.left -= 1;
+          updateTimer();
+          if (player.left <= 0) { stopTimer(); submitTest(true); }
+        }, 1000);
+      }
+
+      function updateTimer() {
+        if (!player) return;
+        var s = Math.max(0, player.left);
+        var mm = String(Math.floor(s / 60)).padStart(2, "0");
+        var ss = String(s % 60).padStart(2, "0");
+        var el = $("playerTimer");
+        el.textContent = mm + ":" + ss;
+        el.classList.toggle("low", s <= 60);
+      }
+
+      function renderQuestion() {
+        var q = player.questions[player.idx];
+        var n = player.questions.length;
+        var answered = Object.keys(player.answers).length;
+        $("playerProgress").textContent = answered + " of " + n + " answered";
+        $("playerBar").style.width = ((player.idx + 1) / n * 100) + "%";
+        $("qCounter").textContent = "Question " + (player.idx + 1) + " of " + n;
+        $("qText").textContent = q.question_text;
+        var letters = ["A", "B", "C", "D"];
+        $("qOptions").innerHTML = q._order.map(function (orig, j) {
+          var sel = player.answers[q.id] === orig ? " sel" : "";
+          return '<button type="button" class="opt' + sel + '" data-opt="' + orig + '"><span class="letter">' + letters[j] + "</span><span>" + esc(q["option_" + orig.toLowerCase()]) + "</span></button>";
+        }).join("");
+        $("qOptions").querySelectorAll("[data-opt]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            player.answers[q.id] = b.getAttribute("data-opt");
+            renderQuestion();
+          });
+        });
+        $("prevBtn").disabled = player.idx === 0;
+        $("nextBtn").disabled = player.idx === n - 1;
+        $("palette").innerHTML = player.questions.map(function (qq, i) {
+          var cls = "";
+          if (player.answers[qq.id]) cls += " done";
+          if (i === player.idx) cls += " now";
+          return '<button type="button" class="' + cls.trim() + '" data-jump="' + i + '">' + (i + 1) + "</button>";
+        }).join("");
+        $("palette").querySelectorAll("[data-jump]").forEach(function (b) {
+          b.addEventListener("click", function () { player.idx = Number(b.getAttribute("data-jump")); renderQuestion(); });
+        });
+      }
+      $("prevBtn").addEventListener("click", function () { if (player && player.idx > 0) { player.idx--; renderQuestion(); } });
+      $("nextBtn").addEventListener("click", function () { if (player && player.idx < player.questions.length - 1) { player.idx++; renderQuestion(); } });
+      $("clearBtn").addEventListener("click", function () {
+        if (!player) return;
+        delete player.answers[player.questions[player.idx].id];
+        renderQuestion();
+      });
+      $("submitBtn").addEventListener("click", function () {
+        if (!player) return;
+        var un = player.questions.length - Object.keys(player.answers).length;
+        askConfirm("Submit this test?", un > 0
+          ? un + " question(s) are still unanswered. Submit anyway? You cannot change answers after submitting."
+          : "You cannot change your answers after submitting.", function () { submitTest(false); });
+      });
+
+      async function submitTest(auto) {
+        if (!player || player.submitting) return;
+        player.submitting = true;
+        stopTimer();
+        var res = await sb.rpc("submit_test", { p_test_id: player.test.id, p_answers: player.answers });
+        if (res.error) {
+          player.submitting = false;
+          toast("Submit failed: " + res.error.message, true);
+          return;
+        }
+        var attemptId = res.data.attempt_id;
+        player = null;
+        if (auto) toast("Time over — your test was submitted automatically.");
+        await openReview(attemptId);
+        if (me && me.role !== "admin") { await loadMyResults(); renderTests(); }
+      }
+
+      window.addEventListener("beforeunload", function (e) {
+        if (player && !player.submitting) { e.preventDefault(); e.returnValue = ""; }
+      });
+
+      /* ----- Anti-cheating guards (active only while a test is running) ----- */
+      function addStrike(reason) {
+        if (!player || player.submitting) return;
+        var now = Date.now();
+        if (now - player.lastStrike < 2000) return; // one event can fire twice (blur + visibility)
+        player.lastStrike = now;
+        player.strikes += 1;
+        var chip = $("warnChip");
+        chip.textContent = "⚠ Warnings: " + player.strikes + "/3";
+        chip.classList.remove("hidden");
+        if (player.strikes >= 3) {
+          toast("Too many warnings — your test has been submitted automatically.", true);
+          submitTest(true);
+          return;
+        }
+        askConfirm("⚠ Warning " + player.strikes + " of 3",
+          reason + " Leaving the test screen is not allowed. After 3 warnings your test will be submitted automatically with the answers marked so far.",
+          function () {});
+      }
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) addStrike("The test screen was hidden (app or tab switched).");
+      });
+      window.addEventListener("blur", function () { addStrike("The test window lost focus."); });
+      document.addEventListener("fullscreenchange", function () {
+        if (!player) return;
+        if (document.fullscreenElement) player.fs = true;
+        else if (player.fs) { player.fs = false; addStrike("You exited full screen."); }
+      });
+      document.addEventListener("contextmenu", function (e) { if (player) e.preventDefault(); });
+      document.addEventListener("copy", function (e) { if (player) e.preventDefault(); });
+
+      /* ---------------- Admin ---------------- */
+      var qmTest = null;
+
+      function setAdminTab(which) {
+        $("atabTests").classList.toggle("on", which === "tests");
+        $("atabResults").classList.toggle("on", which === "results");
+        $("adminTestsPane").classList.toggle("hidden", which !== "tests");
+        $("adminResultsPane").classList.toggle("hidden", which !== "results");
+        if (which === "results") loadAllResults();
+      }
+      $("atabTests").addEventListener("click", function () { setAdminTab("tests"); });
+      $("atabResults").addEventListener("click", function () { setAdminTab("results"); });
+
+      async function loadAdmin() { await loadAdminTests(); }
+
+      async function loadAdminTests() {
+        var res = await sb.from("tests").select("*").order("created_at", { ascending: false });
+        if (res.error) { toast(res.error.message, true); return; }
+        testsCache = res.data || [];
+        await loadCounts(testsCache.map(function (t) { return t.id; }));
+        $("adminTestList").innerHTML = testsCache.map(function (t) {
+          var n = qCounts[t.id] || 0;
+          return '<div class="admin-test-row">' +
+            '<div class="grow"><h3>' + esc(t.title) + "</h3>" +
+            '<span class="meta">' + esc([t.class_name, t.subject].filter(Boolean).join(" · ")) +
+            " · " + n + " questions · " + esc(t.duration_minutes) + " min · " +
+            esc(t.marks_per_question) + " mark each" + (Number(t.negative_marks) > 0 ? " · −" + esc(t.negative_marks) + " negative" : "") + "</span></div>" +
+            '<label class="switch" title="Published (visible to students)"><input type="checkbox" data-pub="' + t.id + '"' + (t.is_published ? " checked" : "") + '><i></i></label>' +
+            '<button class="btn small" data-manage="' + t.id + '">Questions</button>' +
+            '<button class="btn ghost small" data-edit-test="' + t.id + '">Edit</button>' +
+            '<button class="btn danger small" data-del-test="' + t.id + '">Delete</button>' +
+            "</div>";
+        }).join("") || '<div class="empty">No tests yet. Create your first test above.</div>';
+
+        $("adminTestList").querySelectorAll("[data-pub]").forEach(function (sw) {
+          sw.addEventListener("change", async function () {
+            var r = await sb.from("tests").update({ is_published: sw.checked }).eq("id", sw.getAttribute("data-pub"));
+            if (r.error) { toast(r.error.message, true); sw.checked = !sw.checked; return; }
+            toast(sw.checked ? "Test is now live for students." : "Test hidden from students.");
+          });
+        });
+        $("adminTestList").querySelectorAll("[data-manage]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var t = testsCache.find(function (x) { return x.id === b.getAttribute("data-manage"); });
+            if (t) openQM(t);
+          });
+        });
+        $("adminTestList").querySelectorAll("[data-edit-test]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var t = testsCache.find(function (x) { return x.id === b.getAttribute("data-edit-test"); });
+            if (t) fillTestForm(t);
+          });
+        });
+        $("adminTestList").querySelectorAll("[data-del-test]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var t = testsCache.find(function (x) { return x.id === b.getAttribute("data-del-test"); });
+            if (!t) return;
+            askConfirm("Delete this test?", '"' + t.title + '" and all its questions and student results will be deleted permanently.', async function () {
+              var r = await sb.from("tests").delete().eq("id", t.id);
+              if (r.error) { toast(r.error.message, true); return; }
+              toast("Test deleted.");
+              $("questionManager").classList.add("hidden");
+              await loadAdminTests();
+            });
+          });
+        });
+      }
+
+      function fillTestForm(t) {
+        $("tfId").value = t.id;
+        $("tfTitle").value = t.title;
+        $("tfClass").value = t.class_name || "";
+        $("tfSubject").value = t.subject || "";
+        $("tfDesc").value = t.description || "";
+        $("tfDuration").value = t.duration_minutes;
+        $("tfMarks").value = t.marks_per_question;
+        $("tfNegative").value = t.negative_marks;
+        $("tfPublished").value = String(!!t.is_published);
+        $("tfSaveBtn").textContent = "Update test";
+        $("tfCancelBtn").classList.remove("hidden");
+        $("newTestPanel").open = true;
+        $("newTestPanel").scrollIntoView({ behavior: "smooth" });
+      }
+      function resetTestForm() {
+        $("testForm").reset();
+        $("tfId").value = "";
+        $("tfDuration").value = 10; $("tfMarks").value = 1; $("tfNegative").value = 0;
+        $("tfSaveBtn").textContent = "Save test";
+        $("tfCancelBtn").classList.add("hidden");
+      }
+      $("tfCancelBtn").addEventListener("click", resetTestForm);
+
+      $("testForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        var payload = {
+          title: $("tfTitle").value.trim(),
+          class_name: $("tfClass").value.trim(),
+          subject: $("tfSubject").value.trim(),
+          description: $("tfDesc").value.trim(),
+          duration_minutes: Number($("tfDuration").value) || 10,
+          marks_per_question: Number($("tfMarks").value) || 1,
+          negative_marks: Number($("tfNegative").value) || 0,
+          is_published: $("tfPublished").value === "true"
+        };
+        if (!payload.title) { toast("Please give the test a title.", true); return; }
+        var r;
+        if ($("tfId").value) r = await sb.from("tests").update(payload).eq("id", $("tfId").value);
+        else r = await sb.from("tests").insert(payload);
+        if (r.error) { toast(r.error.message, true); return; }
+        toast("Test saved.");
+        resetTestForm();
+        $("newTestPanel").open = false;
+        await loadAdminTests();
+      });
+
+      /* ----- Question manager ----- */
+      async function openQM(t) {
+        qmTest = t;
+        $("qmTestTitle").textContent = t.title;
+        $("questionManager").classList.remove("hidden");
+        $("questionManager").scrollIntoView({ behavior: "smooth" });
+        await loadQMQuestions();
+      }
+      $("qmCloseBtn").addEventListener("click", function () {
+        $("questionManager").classList.add("hidden");
+        qmTest = null;
+        loadAdminTests();
+      });
+
+      async function loadQMQuestions() {
+        if (!qmTest) return;
+        var res = await sb.from("questions").select("*").eq("test_id", qmTest.id).order("sort_order", { ascending: true });
+        if (res.error) { toast(res.error.message, true); return; }
+        var qs = res.data || [];
+        var keys = {};
+        if (qs.length) {
+          var kr = await sb.from("answer_keys").select("*").in("question_id", qs.map(function (q) { return q.id; }));
+          (kr.data || []).forEach(function (k) { keys[k.question_id] = k.correct_option; });
+        }
+        $("qmList").innerHTML = qs.map(function (q, i) {
+          var correct = keys[q.id] || "?";
+          var opts = [["A", q.option_a], ["B", q.option_b], ["C", q.option_c], ["D", q.option_d]].map(function (p) {
+            return p[0] === correct ? "<b>" + p[0] + ". " + esc(p[1]) + " ✓</b>" : p[0] + ". " + esc(p[1]);
+          }).join(" &nbsp;·&nbsp; ");
+          return '<div class="q-row"><div class="qt">Q' + (i + 1) + ". " + esc(q.question_text) + '</div>' +
+            '<div class="qo">' + opts + "</div>" +
+            '<div class="row mt" style="margin-top:10px;">' +
+            '<button class="btn ghost small" data-edit-q="' + q.id + '">Edit</button>' +
+            '<button class="btn danger small" data-del-q="' + q.id + '">Delete</button></div></div>';
+        }).join("") || '<div class="empty">No questions yet. Add the first question below.</div>';
+
+        $("qmList").querySelectorAll("[data-edit-q]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var q = qs.find(function (x) { return x.id === b.getAttribute("data-edit-q"); });
+            if (!q) return;
+            $("qfId").value = q.id;
+            $("qfText").value = q.question_text;
+            $("qfA").value = q.option_a; $("qfB").value = q.option_b;
+            $("qfC").value = q.option_c; $("qfD").value = q.option_d;
+            $("qfCorrect").value = keys[q.id] || "A";
+            $("qfOrder").value = q.sort_order;
+            $("qfCancelBtn").classList.remove("hidden");
+            $("newQuestionPanel").open = true;
+            $("newQuestionPanel").scrollIntoView({ behavior: "smooth" });
+          });
+        });
+        $("qmList").querySelectorAll("[data-del-q]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            askConfirm("Delete this question?", "This question will be removed from the test permanently.", async function () {
+              var r = await sb.from("questions").delete().eq("id", b.getAttribute("data-del-q"));
+              if (r.error) { toast(r.error.message, true); return; }
+              toast("Question deleted.");
+              await loadQMQuestions();
+            });
+          });
+        });
+        var nextOrder = qs.length ? Math.max.apply(null, qs.map(function (q) { return q.sort_order; })) + 1 : 1;
+        if (!$("qfId").value) $("qfOrder").value = nextOrder;
+      }
+      $("qfCancelBtn").addEventListener("click", function () {
+        $("questionForm").reset();
+        $("qfId").value = "";
+        $("qfCancelBtn").classList.add("hidden");
+      });
+
+      $("questionForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        if (!qmTest) { toast("Open a test first.", true); return; }
+        var payload = {
+          test_id: qmTest.id,
+          question_text: $("qfText").value.trim(),
+          option_a: $("qfA").value.trim(),
+          option_b: $("qfB").value.trim(),
+          option_c: $("qfC").value.trim(),
+          option_d: $("qfD").value.trim(),
+          sort_order: Number($("qfOrder").value) || 0
+        };
+        var qid = $("qfId").value;
+        var r;
+        if (qid) {
+          r = await sb.from("questions").update(payload).eq("id", qid);
+        } else {
+          r = await sb.from("questions").insert(payload).select("id").single();
+          if (!r.error) qid = r.data.id;
+        }
+        if (r.error) { toast(r.error.message, true); return; }
+        var kr = await sb.from("answer_keys").upsert({ question_id: qid, correct_option: $("qfCorrect").value }, { onConflict: "question_id" });
+        if (kr.error) { toast(kr.error.message, true); return; }
+        toast("Question saved.");
+        $("questionForm").reset();
+        $("qfId").value = "";
+        $("qfCancelBtn").classList.add("hidden");
+        $("newQuestionPanel").open = false;
+        await loadQMQuestions();
+      });
+
+      /* ----- All results (admin) ----- */
+      async function loadAllResults() {
+        var res = await sb.from("attempts").select("*").not("submitted_at", "is", null).order("submitted_at", { ascending: false });
+        if (res.error) { toast(res.error.message, true); return; }
+        var attempts = res.data || [];
+        var profs = await sb.from("profiles").select("id, name, email");
+        var pmap = {};
+        (profs.data || []).forEach(function (p) { pmap[p.id] = p.name || p.email; });
+        var tmap = {};
+        testsCache.forEach(function (t) { tmap[t.id] = t.title; });
+        var sel = $("resultFilterTest");
+        var cur = sel.value;
+        sel.innerHTML = '<option value="">All tests</option>' + testsCache.map(function (t) { return '<option value="' + t.id + '">' + esc(t.title) + "</option>"; }).join("");
+        sel.value = cur;
+        var list = attempts.filter(function (a) { return !sel.value || a.test_id === sel.value; });
+        $("noAllResults").classList.toggle("hidden", list.length > 0);
+        $("allResultsBody").innerHTML = list.map(function (a) {
+          return '<tr class="clickable" data-areview="' + a.id + '"><td><b>' + esc(pmap[a.student_id] || "Student") + "</b></td>" +
+            "<td>" + esc(tmap[a.test_id] || "Test") + "</td>" +
+            "<td>" + scorePill(a.score, a.total_marks) + "</td>" +
+            "<td>" + esc(a.correct_count) + "</td><td>" + esc(a.wrong_count) + "</td><td>" + esc(a.unanswered_count) + "</td>" +
+            "<td>" + esc(fmtDate(a.submitted_at)) + "</td>" +
+            '<td><button class="btn danger small" data-del-attempt="' + a.id + '">Delete</button></td></tr>';
+        }).join("");
+        $("allResultsBody").querySelectorAll("[data-areview]").forEach(function (row) {
+          row.addEventListener("click", function () { openReview(row.getAttribute("data-areview")); });
+        });
+        $("allResultsBody").querySelectorAll("[data-del-attempt]").forEach(function (b) {
+          b.addEventListener("click", function (ev) {
+            ev.stopPropagation();
+            var id = b.getAttribute("data-del-attempt");
+            askConfirm("Delete this result?", "This student's result will be deleted, and they will be able to take the test again.", async function () {
+              var r = await sb.from("attempts").delete().eq("id", id);
+              if (r.error) { toast(r.error.message, true); return; }
+              toast("Result deleted — the student can retake the test.");
+              loadAllResults();
+            });
+          });
+        });
+      }
+      $("resultFilterTest").addEventListener("change", loadAllResults);
+
+      /* ---------------- Init ---------------- */
+      (async function init() {
+        var sess = await sb.auth.getSession();
+        if (sess.data.session) await enterApp();
+        else show("view-auth");
+      })();
+      sb.auth.onAuthStateChange(function (event) {
+        if (event === "SIGNED_OUT") { me = null; $("userChip").classList.add("hidden"); show("view-auth"); }
+      });
+    </script>
+  </body>
+</html>
