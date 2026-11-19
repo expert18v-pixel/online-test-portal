@@ -80,7 +80,7 @@
       .btn.block { width: 100%; }
 
       label { display: block; font-weight: 700; font-size: 14px; margin: 0 0 7px; }
-      input[type="text"], input[type="email"], input[type="password"], input[type="number"], select, textarea {
+      input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="date"], select, textarea {
         width: 100%; padding: 12px 13px; border: 1px solid var(--line); border-radius: 11px;
         background: #fff; color: var(--ink); min-height: 48px;
       }
@@ -233,14 +233,10 @@
           <h1 class="page-title" style="text-align:center;">Online MCQ Tests</h1>
           <p class="page-sub" style="text-align:center;">Class 12 — Physics, Chemistry, Maths, English &amp; Hindi Compulsory. Take tests from your phone and get your score the moment you finish.</p>
           <div class="card">
-            <div class="auth-tabs">
-              <button type="button" id="tabLogin" class="on">Log in</button>
-              <button type="button" id="tabRegister">Register</button>
-            </div>
             <form id="loginForm">
               <div class="field">
-                <label for="liEmail">Email</label>
-                <input type="email" id="liEmail" autocomplete="email" placeholder="you@example.com" required />
+                <label for="liUser">Username</label>
+                <input type="text" id="liUser" autocomplete="username" placeholder="e.g. rahul19" required />
               </div>
               <div class="field">
                 <label for="liPass">Password</label>
@@ -248,23 +244,8 @@
               </div>
               <button class="btn block" type="submit" id="loginBtn">Log in</button>
             </form>
-            <form id="registerForm" class="hidden">
-              <div class="field">
-                <label for="rgName">Full name</label>
-                <input type="text" id="rgName" autocomplete="name" placeholder="e.g. Rahul Sharma" required />
-              </div>
-              <div class="field">
-                <label for="rgEmail">Email</label>
-                <input type="email" id="rgEmail" autocomplete="email" placeholder="you@example.com" required />
-              </div>
-              <div class="field">
-                <label for="rgPass">Password</label>
-                <input type="password" id="rgPass" autocomplete="new-password" placeholder="At least 6 characters" minlength="6" required />
-              </div>
-              <button class="btn block" type="submit" id="registerBtn">Create account</button>
-            </form>
           </div>
-          <p class="auth-note">New here? Tap <b>Register</b> to create your free student account.</p>
+          <p class="auth-note">Students: your username is your first name + the date you started, e.g. rahul19 (given by your teacher), and your results are private — only you and your teacher can see them.</p>
         </div>
       </section>
 
@@ -343,6 +324,7 @@
         <div class="admin-tabs">
           <button type="button" id="atabTests" class="on">Tests &amp; Questions</button>
           <button type="button" id="atabResults">All Results</button>
+          <button type="button" id="atabStudents">Students</button>
         </div>
 
         <div id="adminTestsPane">
@@ -466,7 +448,40 @@
             </table>
           </div>
           <div class="empty hidden" id="noAllResults" style="margin-top:12px;">No results yet. When students take tests, their scores will appear here.</div>
-          <p class="auth-note">Tap any row to see that student's full answer review.</p>
+          <p class="auth-note">Tap any row to see that student's full answer review. Delete a result if a student must retake a test.</p>
+        </div>
+
+        <div id="adminStudentsPane" class="hidden">
+          <details class="panel" id="newStudentPanel" open>
+            <summary>+ Add a student (creates their login ID)</summary>
+            <div class="inner">
+              <form id="studentForm">
+                <div class="grid-2">
+                  <div class="field">
+                    <label for="sfName">Student's full name *</label>
+                    <input type="text" id="sfName" placeholder="e.g. Rahul Sharma" required />
+                  </div>
+                  <div class="field">
+                    <label for="sfDate">Start date *</label>
+                    <input type="date" id="sfDate" required />
+                  </div>
+                </div>
+                <p class="meta" style="margin:0 0 12px;">Username = student's first name (small letters) + start date only — e.g. <b>rahul19</b>. Password for every student: <b>12345678</b></p>
+                <button class="btn" type="submit" id="sfBtn">Create student ID</button>
+              </form>
+              <div class="card hidden" id="sfResult" style="margin-top:16px; background:var(--green-soft); border-color:var(--green);">
+                <b>Student ID created ✓</b>
+                <p style="margin:6px 0 0;">Username: <b id="sfUsername"></b><br />Password: <b>12345678</b><br /><span class="meta">Give these to the student. They log in with exactly this username.</span></p>
+              </div>
+            </div>
+          </details>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Student</th><th>Username</th><th>Joined</th></tr></thead>
+              <tbody id="studentListBody"></tbody>
+            </table>
+          </div>
+          <div class="empty hidden" id="noStudents" style="margin-top:12px;">No students yet. Add the first student above.</div>
         </div>
       </section>
 
@@ -543,36 +558,16 @@
       }
 
       /* ---------------- Auth ---------------- */
-      function setAuthTab(which) {
-        $("tabLogin").classList.toggle("on", which === "login");
-        $("tabRegister").classList.toggle("on", which === "register");
-        $("loginForm").classList.toggle("hidden", which !== "login");
-        $("registerForm").classList.toggle("hidden", which !== "register");
-      }
-      $("tabLogin").addEventListener("click", function () { setAuthTab("login"); });
-      $("tabRegister").addEventListener("click", function () { setAuthTab("register"); });
-
+      /* Login is by username (student name + start date). Internally each
+         username maps to a fixed system email: <username>@testportal.local */
       $("loginForm").addEventListener("submit", async function (e) {
         e.preventDefault();
         $("loginBtn").disabled = true;
-        var res = await sb.auth.signInWithPassword({ email: $("liEmail").value.trim(), password: $("liPass").value });
+        var uname = $("liUser").value.trim().toLowerCase().replace(/\s+/g, "");
+        var res = await sb.auth.signInWithPassword({ email: uname + "@testportal.local", password: $("liPass").value });
         $("loginBtn").disabled = false;
-        if (res.error) { toast(res.error.message, true); return; }
+        if (res.error) { toast("Wrong username or password. Please check and try again.", true); return; }
         await enterApp();
-      });
-
-      $("registerForm").addEventListener("submit", async function (e) {
-        e.preventDefault();
-        $("registerBtn").disabled = true;
-        var res = await sb.auth.signUp({
-          email: $("rgEmail").value.trim(),
-          password: $("rgPass").value,
-          options: { data: { name: $("rgName").value.trim() } }
-        });
-        $("registerBtn").disabled = false;
-        if (res.error) { toast(res.error.message, true); return; }
-        if (res.data.session) { toast("Account created. Welcome!"); await enterApp(); }
-        else { toast("Account created — now log in with your email and password."); setAuthTab("login"); }
       });
 
       $("logoutBtn").addEventListener("click", async function () {
@@ -908,14 +903,23 @@
       function setAdminTab(which) {
         $("atabTests").classList.toggle("on", which === "tests");
         $("atabResults").classList.toggle("on", which === "results");
+        $("atabStudents").classList.toggle("on", which === "students");
         $("adminTestsPane").classList.toggle("hidden", which !== "tests");
         $("adminResultsPane").classList.toggle("hidden", which !== "results");
+        $("adminStudentsPane").classList.toggle("hidden", which !== "students");
         if (which === "results") loadAllResults();
+        if (which === "students") loadStudents();
       }
       $("atabTests").addEventListener("click", function () { setAdminTab("tests"); });
       $("atabResults").addEventListener("click", function () { setAdminTab("results"); });
+      $("atabStudents").addEventListener("click", function () { setAdminTab("students"); });
 
-      async function loadAdmin() { await loadAdminTests(); }
+      async function loadAdmin() {
+        var now = new Date();
+        var p = function (n) { return String(n).padStart(2, "0"); };
+        $("sfDate").value = now.getFullYear() + "-" + p(now.getMonth() + 1) + "-" + p(now.getDate());
+        await loadAdminTests();
+      }
 
       async function loadAdminTests() {
         var res = await sb.from("tests").select("*").order("created_at", { ascending: false });
@@ -1116,6 +1120,50 @@
         $("qfCancelBtn").classList.add("hidden");
         $("newQuestionPanel").open = false;
         await loadQMQuestions();
+      });
+
+      /* ----- Students: pre-created login IDs (username = name + start date) ----- */
+      var sbCreator = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false, storageKey: "tp-creator" } });
+      function slugName(name) {
+        var s = String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        return s || "student";
+      }
+      function dateStamp(d) {
+        // Only the day of the start date, e.g. the 19th -> "19" (username: rahul19)
+        return String(d.getDate()).padStart(2, "0");
+      }
+      async function loadStudents() {
+        var res = await sb.from("profiles").select("*").eq("role", "student").order("created_at", { ascending: true });
+        if (res.error) { toast(res.error.message, true); return; }
+        var rows = res.data || [];
+        $("noStudents").classList.toggle("hidden", rows.length > 0);
+        $("studentListBody").innerHTML = rows.map(function (pr) {
+          var uname = (pr.email || "").split("@")[0];
+          return "<tr><td><b>" + esc(pr.name) + "</b></td><td>" + esc(uname) + "</td><td>" + esc(fmtDate(pr.created_at)) + "</td></tr>";
+        }).join("");
+      }
+      $("studentForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        var name = $("sfName").value.trim();
+        var dval = $("sfDate").value;
+        if (!name || !dval) { toast("Please enter the student's name and start date.", true); return; }
+        var firstName = slugName(name.trim().split(/\s+/)[0]);
+        var base = firstName + dateStamp(new Date(dval + "T00:00:00"));
+        $("sfBtn").disabled = true;
+        var uname = base, n = 1;
+        while (true) {
+          var chk = await sb.from("profiles").select("id").eq("email", uname + "@testportal.local").maybeSingle();
+          if (!chk.data) break;
+          n += 1; uname = base + n;
+        }
+        var res = await sbCreator.auth.signUp({ email: uname + "@testportal.local", password: "12345678", options: { data: { name: name } } });
+        $("sfBtn").disabled = false;
+        if (res.error) { toast(res.error.message, true); return; }
+        $("sfUsername").textContent = uname;
+        $("sfResult").classList.remove("hidden");
+        toast("Student ID created: " + uname);
+        $("sfName").value = "";
+        await loadStudents();
       });
 
       /* ----- All results (admin) ----- */
