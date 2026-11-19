@@ -251,14 +251,14 @@
 
       <!-- ============ STUDENT HOME ============ -->
       <section class="view" id="view-home">
-        <h1 class="page-title">Available Tests</h1>
-        <p class="page-sub">Class 12 — Physics, Chemistry, Maths, English, Hindi Compulsory. Pick a test and start. Your score appears as soon as you submit — and stays saved in your account.</p>
+        <h1 class="page-title">Today's Test</h1>
+        <p class="page-sub">Class 12 — Physics, Chemistry, Maths, English, Hindi Compulsory. Only today's test is shown here — it closes automatically tomorrow, but your scores always stay saved in My Results below.</p>
         <div class="filters">
           <select id="filterClass" class="hidden" aria-label="Filter by class"><option value="">All classes</option></select>
           <select id="filterSubject" aria-label="Filter by subject"><option value="">All subjects</option></select>
         </div>
         <div class="test-grid" id="testGrid"></div>
-        <div class="empty hidden" id="noTests">No tests available right now. Please check back later.</div>
+        <div class="empty hidden" id="noTests">No test is scheduled for today. Please check back tomorrow.</div>
 
         <h2 class="page-title mt" style="font-size:22px; margin-top:38px;">My Results</h2>
         <p class="page-sub">Every test you have taken, with scores.</p>
@@ -379,6 +379,10 @@
                       <option value="true">Published (live)</option>
                     </select>
                   </div>
+                </div>
+                <div class="field">
+                  <label for="tfDate">Test date — students see this test ONLY on this date *</label>
+                  <input type="date" id="tfDate" required />
                 </div>
                 <div class="row">
                   <button class="btn" type="submit" id="tfSaveBtn">Save test</button>
@@ -604,7 +608,12 @@
 
       /* ---------------- Student home ---------------- */
       async function loadHome() {
-        var res = await sb.from("tests").select("*").eq("is_published", true).order("created_at", { ascending: false });
+        // Students see ONLY today's test (by its test_date). Older tests close
+        // automatically; their results stay saved in My Results / admin panel.
+        var nowD = new Date();
+        var p2 = function (n) { return String(n).padStart(2, "0"); };
+        var todayStr = nowD.getFullYear() + "-" + p2(nowD.getMonth() + 1) + "-" + p2(nowD.getDate());
+        var res = await sb.from("tests").select("*").eq("is_published", true).eq("test_date", todayStr).order("created_at", { ascending: false });
         if (res.error) { toast(res.error.message, true); return; }
         testsCache = res.data || [];
         await loadCounts(testsCache.map(function (t) { return t.id; }));
@@ -918,6 +927,7 @@
         var now = new Date();
         var p = function (n) { return String(n).padStart(2, "0"); };
         $("sfDate").value = now.getFullYear() + "-" + p(now.getMonth() + 1) + "-" + p(now.getDate());
+        $("tfDate").value = $("sfDate").value;
         await loadAdminTests();
       }
 
@@ -931,6 +941,7 @@
           return '<div class="admin-test-row">' +
             '<div class="grow"><h3>' + esc(t.title) + "</h3>" +
             '<span class="meta">' + esc([t.class_name, t.subject].filter(Boolean).join(" · ")) +
+            " · 📅 " + esc(t.test_date ? new Date(t.test_date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" }) : "no date") +
             " · " + n + " questions · " + esc(t.duration_minutes) + " min · " +
             esc(t.marks_per_question) + " mark each" + (Number(t.negative_marks) > 0 ? " · −" + esc(t.negative_marks) + " negative" : "") + "</span></div>" +
             '<label class="switch" title="Published (visible to students)"><input type="checkbox" data-pub="' + t.id + '"' + (t.is_published ? " checked" : "") + '><i></i></label>' +
@@ -984,6 +995,7 @@
         $("tfMarks").value = t.marks_per_question;
         $("tfNegative").value = t.negative_marks;
         $("tfPublished").value = String(!!t.is_published);
+        $("tfDate").value = t.test_date || "";
         $("tfSaveBtn").textContent = "Update test";
         $("tfCancelBtn").classList.remove("hidden");
         $("newTestPanel").open = true;
@@ -992,6 +1004,8 @@
       function resetTestForm() {
         $("testForm").reset();
         $("tfId").value = "";
+        var nd2 = new Date(); var pp2 = function (n) { return String(n).padStart(2, "0"); };
+        $("tfDate").value = nd2.getFullYear() + "-" + pp2(nd2.getMonth() + 1) + "-" + pp2(nd2.getDate());
         $("tfDuration").value = 10; $("tfMarks").value = 1; $("tfNegative").value = 0;
         $("tfSaveBtn").textContent = "Save test";
         $("tfCancelBtn").classList.add("hidden");
@@ -1008,7 +1022,8 @@
           duration_minutes: Number($("tfDuration").value) || 10,
           marks_per_question: Number($("tfMarks").value) || 1,
           negative_marks: Number($("tfNegative").value) || 0,
-          is_published: $("tfPublished").value === "true"
+          is_published: $("tfPublished").value === "true",
+          test_date: $("tfDate").value || null
         };
         if (!payload.title) { toast("Please give the test a title.", true); return; }
         var r;
